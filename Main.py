@@ -31,18 +31,26 @@ class manage_products:
         print("Data deleted succesfully")
         self.con.commit()
 
-    def UpdateProduct(self):
+    def updateProduct(self):
         update=int(input("Enter ID of product to update: "))
         prodName=input("Enter new product name: ")
         prodPrice=input("Enter new product price: ")
         prodQuantity=input("Enter new product quantity: ")
         self.curs.execute(f"UPDATE Product SET prodName='{prodName}', prodPrice={prodPrice},prodQuantity={prodQuantity} WHERE prodID={update}")
         self.con.commit()
+        print("Data updated succesfully")
+
+    def displayProduct(self):
+        result=self.curs.execute("SELECT * FROM Product")
+        table=result.fetchall()
+        for row in table:
+            print(row)
+
 
 def menu():
     print("\t1.\t Add a product \n\t2.\t Remove a product \n\t3.\t Update a product \n\t4.\t Display all products \n\t5.\t Sell a product \n\t6.\t Exit\n")
 while True:
-    print("\tWelcome to the store Management System")
+    print("\n\tWelcome to the store Management System")
     menu()
     choice=int(input("Select a choice: "))
     manage=manage_products()
@@ -51,6 +59,8 @@ while True:
     elif(choice==2):
         manage.deleteProduct()
     elif(choice==3):
-        manage.UpdateProduct()
+        manage.updateProduct()
+    elif(choice==4):
+        manage.displayProduct()
 
 
