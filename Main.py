@@ -1,83 +1,159 @@
 import sqlite3
-class manage_products:
+
+
+class ManageProducts:
     def __init__(self):
-        self.con=sqlite3.connect("store_database.db")
-        self.curs=self.con.cursor()
+        self.con = sqlite3.connect("store_database.db")
+        self.curs = self.con.cursor()
+
         self.curs.execute("""
         CREATE TABLE IF NOT EXISTS Product(
-                          prodID INTEGER PRIMARY KEY AUTOINCREMENT,
-                          prodName,
-                          prodPrice,
-                          prodQuantity
-                          )
-
+            prodID INTEGER PRIMARY KEY AUTOINCREMENT,
+            prodName TEXT,
+            prodPrice REAL,
+            prodQuantity INTEGER
+        )
         """)
-        self.curs.execute("CREATE TABLE IF NOT EXISTS Sales(saleID INTEGER PRIMARY KEY AUTOINCREMENT,saleDate,prodName,saleTotal)" )
+
+        self.curs.execute("""
+        CREATE TABLE IF NOT EXISTS Sales(
+            saleID INTEGER PRIMARY KEY AUTOINCREMENT,
+            saleDate TEXT,
+            prodName TEXT,
+            saleTotal REAL
+        )
+        """)
+
         self.con.commit()
 
     def addProduct(self):
-        prodName=str(input("Enter product name: "))
-        prodPrice=float(input("Enter product price: "))
-        prodQuantity=int(input("Enter product quantity: "))
-        self.curs.execute(f"""
-                          INSERT INTO Product(prodName,prodPrice,prodQuantity) 
-                          VALUES('{prodName}', {prodPrice}, {prodQuantity})
-        """)
+        prodName = input("Enter product name: ")
+        prodPrice = float(input("Enter product price: "))
+        prodQuantity = int(input("Enter product quantity: "))
+
+        self.curs.execute("""
+            INSERT INTO Product(prodName, prodPrice, prodQuantity)
+            VALUES (?, ?, ?)
+        """, (prodName, prodPrice, prodQuantity))
+
         self.con.commit()
-    
+        print("Product added successfully")
+
     def deleteProduct(self):
-        remove=int(input("Enter ID of product to remove: "))
-        self.curs.execute(f"DELETE FROM Product WHERE prodID={remove}")
-        print("Data deleted succesfully")
+        remove = int(input("Enter ID of product to remove: "))
+
+        self.curs.execute("DELETE FROM Product WHERE prodID = ?", (remove,))
         self.con.commit()
+
+        print("Product deleted successfully")
 
     def updateProduct(self):
-        update=int(input("Enter ID of product to update: "))
-        prodName=input("Enter new product name: ")
-        prodPrice=input("Enter new product price: ")
-        prodQuantity=input("Enter new product quantity: ")
-        self.curs.execute("UPDATE Product SET prodName=?, prodPrice=?,prodQuantity=? WHERE prodID=?",(prodName, prodPrice, prodQuantity, update))
+        update = int(input("Enter ID of product to update: "))
+        prodName = input("Enter new product name: ")
+        prodPrice = float(input("Enter new product price: "))
+        prodQuantity = int(input("Enter new product quantity: "))
+
+        self.curs.execute("""
+            UPDATE Product
+            SET prodName = ?, prodPrice = ?, prodQuantity = ?
+            WHERE prodID = ?
+        """, (prodName, prodPrice, prodQuantity, update))
+
         self.con.commit()
-        print("Data updated succesfully")
+        print("Product updated successfully")
 
     def displayProduct(self):
-        result=self.curs.execute("SELECT * FROM Product")
-        result=result.fetchall()
-        for row in result:
+        self.curs.execute("SELECT * FROM Product")
+        results = self.curs.fetchall()
+
+        for row in results:
             print(row)
 
     def sellProduct(self):
-        productID=input("Enter product ID: ")
-        saleDate=input("Enter sale date: ")
-        saleQuantity=int (input("Enter Sale quantity: "))
-        self.curs.execute("SELECT prodQuantity, prodPrice, prodName FROM Product WHERE prodID=?",(productID,))
-        results=self.curs.fetchall()
-        for row in results:
-            quantity=row[0]
-            totQuantity=int(quantity) - saleQuantity
-            totPrice=row[1]*saleQuantity
-            name=row[2]
-        self.curs.execute("INSERT INTO Sales(saleDate,prodName,saleTotal) VALUES(?, ?, ?)",(saleDate, name, totPrice))
-        self.curs.execute("UPDATE Product SET prodQuantity=? WHERE prodID=?",(totQuantity, productID))
+        productID = int(input("Enter product ID: "))
+        saleDate = input("Enter sale date: ")
+        saleQuantity = int(input("Enter sale quantity: "))
+
+        self.curs.execute("""
+            SELECT prodQuantity, prodPrice, prodName
+            FROM Product
+            WHERE prodID = ?
+        """, (productID,))
+
+        result = self.curs.fetchone()
+
+        if result is None:
+            print("Product not found")
+            return
+
+        quantity, price, name = result
+
+        if saleQuantity > quantity:
+            print("Not enough stock!")
+            return
+
+        new_quantity = quantity - saleQuantity
+        total_price = price * saleQuantity
+
+        self.curs.execute("""
+            INSERT INTO Sales(saleDate, prodName, saleTotal)
+            VALUES (?, ?, ?)
+        """, (saleDate, name, total_price))
+
+        self.curs.execute("""
+            UPDATE Product
+            SET prodQuantity = ?
+            WHERE prodID = ?
+        """, (new_quantity, productID))
+
         self.con.commit()
-        self.curs.close
+        print("Sale recorded successfully")
+
+    def close(self):
+        self.con.close()
+
 
 def menu():
-    print("\t1.\t Add a product \n\t2.\t Remove a product \n\t3.\t Update a product \n\t4.\t Display all products \n\t5.\t Sell a product \n\t6.\t Exit\n")
-while True:
-    print("\n\tWelcome to the store Management System")
-    menu()
-    choice=int(input("Select a choice: "))
-    manage=manage_products()
-    if(choice==1):
-        manage.addProduct()
-    elif(choice==2):
-        manage.deleteProduct()
-    elif(choice==3):
-        manage.updateProduct()
-    elif(choice==4):
-        manage.displayProduct()
-    elif(choice==5):
-        manage.sellProduct()
+    print("""
+    1. Add a product
+    2. Remove a product
+    3. Update a product
+    4. Display all products
+    5. Sell a product
+    6. Exit
+    """)
 
 
+def main():
+    manage = ManageProducts()
+
+    while True:
+        print("\nWelcome to the Store Management System")
+        menu()
+
+        try:
+            choice = int(input("Select a choice: "))
+        except ValueError:
+            print("Please enter a valid number")
+            continue
+
+        if choice == 1:
+            manage.addProduct()
+        elif choice == 2:
+            manage.deleteProduct()
+        elif choice == 3:
+            manage.updateProduct()
+        elif choice == 4:
+            manage.displayProduct()
+        elif choice == 5:
+            manage.sellProduct()
+        elif choice == 6:
+            manage.close()
+            print("Goodbye!")
+            break
+        else:
+            print("Invalid choice")
+
+
+if __name__ == "__main__":
+    main()
